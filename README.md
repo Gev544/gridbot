@@ -12,6 +12,7 @@ Optimized for choppy ranges: buy low/sell high on spot, keep delta neutral with 
 - Edit `.env` (based on `.env.sample`): symbol, grid range/levels, order size, hedge ratio, and `DRY_RUN`.
 - Safety: `EXIT_ON_BREAKOUT=true` cancels the grid if price exits the band. Drawdown guard is stubbed; extend before live use.
 - Testnet: Bybit client defaults to mainnet; adjust `bybit_client.py` if you need testnet.
+- Auto grid: set `AUTO_GRID=true` to derive `GRID_MIN_PRICE`/`GRID_MAX_PRICE` from recent Binance closes (percentiles over `AUTO_GRID_LIMIT` klines at `AUTO_GRID_INTERVAL`; default 10th/90th percentiles). Tune `AUTO_GRID_LOW_PCT`/`HIGH_PCT` to widen/narrow the band.
 
 ## Testing
 - Dev deps: `python -m pip install -r requirements-dev.txt` (after activating `.venv`).

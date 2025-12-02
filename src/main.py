@@ -4,14 +4,13 @@ from src.utils.config import Settings
 from src.utils.logging import setup_logger
 from src.exchanges.binance_client import BinanceSpot
 from src.exchanges.bybit_client import BybitFutures
-from src.engine.grid import build_grid
+from src.engine.grid import build_grid, auto_range_from_series
 from src.engine.hedge import HedgeManager
 
 async def run():
     load_dotenv()
     log = setup_logger()
     cfg = Settings()
-    cfg.validate_range()
 
     log.info("Starting Hedged Grid Bot (Binance Spot + Bybit Futures)")
     log.info(f"Symbol={cfg.symbol} Range=({cfg.grid_min}, {cfg.grid_max}) Levels={cfg.grid_levels} OrderUSD={cfg.grid_order_size_usdt} DRY_RUN={cfg.dry_run}")
@@ -22,6 +21,15 @@ async def run():
     bybit = BybitFutures(cfg.bybit_key, cfg.bybit_secret)
 
     try:
+        # Auto-grid: pull recent prices to set band
+        if cfg.auto_grid:
+            klines = await binance.get_klines(cfg.symbol, interval=cfg.auto_grid_interval, limit=cfg.auto_grid_limit)
+            closes = [float(k[4]) for k in klines]
+            cfg.grid_min, cfg.grid_max = auto_range_from_series(closes, cfg.auto_grid_low_pct, cfg.auto_grid_high_pct)
+            log.info(f"Auto grid from {cfg.auto_grid_limit}x{cfg.auto_grid_interval} closes: min={cfg.grid_min:.2f}, max={cfg.grid_max:.2f}")
+
+        cfg.validate_range()
+
         # Get mid price
         mid = await binance.get_price(cfg.symbol)
         grid = build_grid(cfg.grid_min, cfg.grid_max, cfg.grid_levels, mid)

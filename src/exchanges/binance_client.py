@@ -24,6 +24,10 @@ class BinanceSpot:
         ticker = await self._client.get_symbol_ticker(symbol=symbol)
         return float(ticker["price"])
 
+    async def get_klines(self, symbol: str, interval: str="1h", limit: int=200):
+        # Returns raw kline rows as provided by Binance
+        return await self._client.get_klines(symbol=symbol, interval=interval, limit=limit)
+
     def place_limit_buy(self, symbol: str, quantity: float, price: float, dry_run: bool=True):
         if dry_run:
             self.log.info(f"[DRY] BINANCE BUY {symbol} qty={quantity} @ {price}")

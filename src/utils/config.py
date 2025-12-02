@@ -22,9 +22,16 @@ class Settings(BaseModel):
     session_max_dd_pct: float = Field(default_factory=lambda: float(os.getenv("SESSION_MAX_DD_PCT","3")))
     exit_on_breakout: bool = Field(default_factory=lambda: _to_bool(os.getenv("EXIT_ON_BREAKOUT","true"), True))
     dry_run: bool = Field(default_factory=lambda: _to_bool(os.getenv("DRY_RUN","true"), True))
+    auto_grid: bool = Field(default_factory=lambda: _to_bool(os.getenv("AUTO_GRID","false"), False))
+    auto_grid_interval: str = Field(default_factory=lambda: os.getenv("AUTO_GRID_INTERVAL","1h"))
+    auto_grid_limit: int = Field(default_factory=lambda: int(os.getenv("AUTO_GRID_LIMIT","200")))
+    auto_grid_low_pct: float = Field(default_factory=lambda: float(os.getenv("AUTO_GRID_LOW_PCT","0.1")))
+    auto_grid_high_pct: float = Field(default_factory=lambda: float(os.getenv("AUTO_GRID_HIGH_PCT","0.9")))
 
     def validate_range(self):
         if self.grid_min >= self.grid_max:
             raise ValueError("GRID_MIN_PRICE must be < GRID_MAX_PRICE")
         if self.grid_levels < 2:
             raise ValueError("GRID_LEVELS must be >= 2")
+        if self.auto_grid_low_pct <= 0 or self.auto_grid_high_pct >= 1 or self.auto_grid_low_pct >= self.auto_grid_high_pct:
+            raise ValueError("AUTO_GRID_LOW_PCT must be < AUTO_GRID_HIGH_PCT and within (0,1)")
