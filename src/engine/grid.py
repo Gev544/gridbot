@@ -1,27 +1,21 @@
 from dataclasses import dataclass
-import numpy as np
 
 @dataclass
-class GridPlan:
-    buy_levels: list
-    sell_levels: list
-    step: float
+class GridSide:
+    entries: list
+    tps: list
 
-def build_grid(min_price: float, max_price: float, levels: int, mid: float) -> GridPlan:
-    prices = np.linspace(min_price, max_price, levels)
-    # split around mid price
-    buys = [p for p in prices if p < mid]
-    sells = [p for p in prices if p > mid]
-    step = (max_price - min_price) / (levels - 1)
-    return GridPlan(buy_levels=buys[::-1], sell_levels=sells, step=step)
+@dataclass
+class BothSidesGrid:
+    longs: GridSide
+    shorts: GridSide
 
-
-def auto_range_from_series(series: list, low_pct: float, high_pct: float) -> tuple:
-    """Compute price band using percentiles over a series of prices."""
-    if not series:
-        raise ValueError("Price series is empty")
-    low = float(np.quantile(series, low_pct))
-    high = float(np.quantile(series, high_pct))
-    if low == high:
-        high = low * 1.01
-    return low, high
+def build_both_sides(mid: float, levels: int, step_pct: float, tp_pct: float):
+    step = step_pct / 100.0
+    tp = tp_pct / 100.0
+    downs = [mid * (1 - i * step) for i in range(1, levels+1)]
+    downs_tp = [p * (1 + tp) for p in downs]
+    ups = [mid * (1 + i * step) for i in range(1, levels+1)]
+    ups_tp = [p * (1 - tp) for p in ups]
+    return BothSidesGrid(longs=GridSide(entries=downs, tps=downs_tp),
+                         shorts=GridSide(entries=ups, tps=ups_tp))

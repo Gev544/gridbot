@@ -1,19 +1,13 @@
-# Hedged Grid Bot — Binance Spot + Bybit Futures
+# Binance Futures Grid Bot — BOTH SIDES (Long below, Short above)
 
-Runs a spot grid on Binance and auto-hedges short on Bybit USDT-PERP. 
-Optimized for choppy ranges: buy low/sell high on spot, keep delta neutral with a futures hedge.
+**Mode:** Futures-only, delta-balanced grid (long-below / short-above).  
+**Exchange:** Binance USDⓈ-M Futures.  
+**Leverage:** Uses *effective* 1.2× exposure (orders sized accordingly) while account leverage is set to 1× for safety.
 
-## Quickstart
-- Python 3.10+ recommended. `./run.sh` will create `.venv`, install deps, and copy `.env.sample` if missing.
-- Fill `.env` with your API keys and grid settings before turning off `DRY_RUN`.
-- Run: `bash run.sh`
+**How it works**
+- Places **BUY limits below** the mid (opens long) with a paired **SELL TP** above (reduce-only).
+- Places **SELL limits above** the mid (opens short) with a paired **BUY TP** below (reduce-only).
+- Keeps the book roughly delta-neutral and harvests chop.
+- Basic breakout guard: if price moves beyond `MID ± MAX_RANGE_%`, cancels grid.
 
-## Configuration
-- Edit `.env` (based on `.env.sample`): symbol, grid range/levels, order size, hedge ratio, and `DRY_RUN`.
-- Safety: `EXIT_ON_BREAKOUT=true` cancels the grid if price exits the band. Drawdown guard is stubbed; extend before live use.
-- Testnet: Bybit client defaults to mainnet; adjust `bybit_client.py` if you need testnet.
-- Auto grid: set `AUTO_GRID=true` to derive `GRID_MIN_PRICE`/`GRID_MAX_PRICE` from recent Binance closes (percentiles over `AUTO_GRID_LIMIT` klines at `AUTO_GRID_INTERVAL`; default 10th/90th percentiles). Tune `AUTO_GRID_LOW_PCT`/`HIGH_PCT` to widen/narrow the band.
-
-## Testing
-- Dev deps: `python -m pip install -r requirements-dev.txt` (after activating `.venv`).
-- Run tests: `pytest`
+> ⚠️ This is a minimal, educational skeleton. Extend with: ADX/ATR filters, liquidation-distance checks, funding tracking, and alerting before going live.

@@ -6,10 +6,9 @@ source .venv/bin/activate
 pip install -U pip
 pip install -r requirements.txt
 
-# copy .env.sample to .env if not exists
 if [ ! -f .env ]; then
   cp .env.sample .env
-  echo "[i] Created .env from sample. Fill your keys before live trading."
+  echo "[i] Created .env from sample. Edit keys and set DRY_RUN=false to go live."
 fi
 
 python -m src.main
