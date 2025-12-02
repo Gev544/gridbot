@@ -1,7 +1,7 @@
 import asyncio
-from binance import AsyncClient, BinanceSocketManager
-from binance.spot import Spot as SpotSync
 import logging
+from binance import AsyncClient, BinanceSocketManager
+from binance.client import Client as SpotSync
 
 class BinanceSpot:
     def __init__(self, api_key: str, api_secret: str):
@@ -32,15 +32,15 @@ class BinanceSpot:
         if dry_run:
             self.log.info(f"[DRY] BINANCE BUY {symbol} qty={quantity} @ {price}")
             return {"orderId":"DRY"}
-        return self._spot_sync.new_order(symbol=symbol, side="BUY", type="LIMIT", timeInForce="GTC",
-                                         quantity=quantity, price=f"{price:.8f}")
+        return self._spot_sync.create_order(symbol=symbol, side="BUY", type="LIMIT", timeInForce="GTC",
+                                            quantity=quantity, price=f"{price:.8f}")
 
     def place_limit_sell(self, symbol: str, quantity: float, price: float, dry_run: bool=True):
         if dry_run:
             self.log.info(f"[DRY] BINANCE SELL {symbol} qty={quantity} @ {price}")
             return {"orderId":"DRY"}
-        return self._spot_sync.new_order(symbol=symbol, side="SELL", type="LIMIT", timeInForce="GTC",
-                                         quantity=quantity, price=f"{price:.8f}")
+        return self._spot_sync.create_order(symbol=symbol, side="SELL", type="LIMIT", timeInForce="GTC",
+                                            quantity=quantity, price=f"{price:.8f}")
 
     def cancel_all(self, symbol: str, dry_run: bool=True):
         if dry_run:
@@ -52,5 +52,5 @@ class BinanceSpot:
         return self._spot_sync.get_open_orders(symbol=symbol)
 
     def get_balances(self):
-        acc = self._spot_sync.account()
+        acc = self._spot_sync.get_account()
         return {b["asset"]: float(b["free"]) + float(b["locked"]) for b in acc["balances"]}
