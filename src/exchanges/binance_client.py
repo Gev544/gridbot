@@ -12,8 +12,9 @@ class BinanceSpot:
         self.log = logging.getLogger("gridbot.binance")
 
     async def connect(self):
+        # Async client for market data; sync client for order/cancel
         self._client = await AsyncClient.create(self.api_key, self.api_secret)
-        self._spot_sync = SpotSync(key=self.api_key, secret=self.api_secret)
+        self._spot_sync = SpotSync(self.api_key, self.api_secret)
 
     async def close(self):
         if self._client:
