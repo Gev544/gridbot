@@ -66,6 +66,11 @@ class BinanceSpot:
             qty = math.ceil(min_notional / price / step) * step
         return qty
 
+    def get_filters(self, symbol: str) -> dict:
+        """Return cached symbol filters (tickSize, stepSize, minQty, minNotional)."""
+        self._ensure_filters(symbol)
+        return self._filters.get(symbol, {})
+
     async def get_klines(self, symbol: str, interval: str="1h", limit: int=200):
         # Returns raw kline rows as provided by Binance
         return await self._client.get_klines(symbol=symbol, interval=interval, limit=limit)

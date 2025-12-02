@@ -34,15 +34,17 @@ async def run():
         # Get mid price
         mid = await binance.get_price(cfg.symbol)
         grid = build_grid(cfg.grid_min, cfg.grid_max, cfg.grid_levels, mid)
-        log.info(f"Mid price: {mid:.2f}. Grid step ~ {grid.step:.2f}")
 
-        # Determine quantity per order based on USDT size and price
-        qty_per_order = max(cfg.grid_order_size_usdt / mid, 1e-6)
-        # crude lot rounding for BTC
-        lot = 0.0001 if "BTC" in cfg.symbol else 0.001
-        qty_per_order = math.floor(qty_per_order/lot)*lot
-        if qty_per_order <= 0:
-            qty_per_order = lot
+        # Determine quantity per order based on USDT size, rounded to exchange filters
+        filters = binance.get_filters(cfg.symbol)
+        lot_step = filters.get("stepSize", 0.0001 if "BTC" in cfg.symbol else 0.001)
+        min_qty = filters.get("minQty", lot_step)
+        qty_per_order = cfg.grid_order_size_usdt / mid
+        qty_per_order = math.floor(qty_per_order / lot_step) * lot_step
+        if qty_per_order < min_qty:
+            qty_per_order = min_qty
+        lot = lot_step
+        log.info(f"Mid price: {mid:.2f}. Grid step ~ {grid.step:.2f}. Qty/order ≈ {qty_per_order}")
 
         # Cancel any leftovers
         await binance.cancel_all(cfg.symbol, dry_run=cfg.dry_run)
@@ -53,7 +55,12 @@ async def run():
 
         # Place initial ladder
         placed = 0
-        for p in grid.buy_levels[: len(grid.buy_levels)//2]:
+        buy_levels = grid.buy_levels[: len(grid.buy_levels)//2]
+        quote_qty = float(balances.get(cfg.quote, 0.0))
+        max_buys = math.floor(quote_qty / cfg.grid_order_size_usdt) if cfg.grid_order_size_usdt > 0 else 0
+        if max_buys < len(buy_levels):
+            log.warning(f"Not enough {cfg.quote} to place all buy orders. Have {quote_qty}, each buy ≈ {cfg.grid_order_size_usdt} {cfg.quote}. Placing {max_buys}/{len(buy_levels)} buys.")
+        for p in buy_levels[: max_buys]:
             binance.place_limit_buy(cfg.symbol, qty_per_order, p, dry_run=cfg.dry_run)
             placed += 1
 
