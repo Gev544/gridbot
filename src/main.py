@@ -47,17 +47,27 @@ async def run():
         # Cancel any leftovers
         await binance.cancel_all(cfg.symbol, dry_run=cfg.dry_run)
 
+        # Get balances once before placing orders to respect available base for sells
+        balances = binance.get_balances()
+        base_qty = float(balances.get(cfg.base, 0.0))
+
         # Place initial ladder
         placed = 0
         for p in grid.buy_levels[: len(grid.buy_levels)//2]:
             binance.place_limit_buy(cfg.symbol, qty_per_order, p, dry_run=cfg.dry_run)
             placed += 1
-        for p in grid.sell_levels[: len(grid.sell_levels)//2]:
+
+        sell_levels = grid.sell_levels[: len(grid.sell_levels)//2]
+        max_sells = math.floor(base_qty / qty_per_order) if qty_per_order > 0 else 0
+        if max_sells < len(sell_levels):
+            log.warning(f"Not enough {cfg.base} to place all sell orders. Have {base_qty}, each sell qty {qty_per_order}. Placing {max_sells}/{len(sell_levels)} sells.")
+        for p in sell_levels[: max_sells]:
             binance.place_limit_sell(cfg.symbol, qty_per_order, p, dry_run=cfg.dry_run)
             placed += 1
-        log.info(f"Placed {placed} initial grid orders (half on each side).")
 
-        # Hedge based on current base balance
+        log.info(f"Placed {placed} initial grid orders (buys + sells within balance).")
+
+        # Hedge based on current base balance (may have reduced sells)
         balances = binance.get_balances()
         base_qty = float(balances.get(cfg.base, 0.0))
         hedge = HedgeManager(bybit, cfg.symbol, cfg.hedge_ratio)
