@@ -71,9 +71,8 @@ def fetch_ratio_klines(start, end, interval="1m"):
     df = pd.merge(btc, eth, on="ts", how="inner", suffixes=("_btc","_eth"))
     ratio = df["close_btc"] / df["close_eth"]
     return pd.DataFrame({
-        "open_time": df["ts"],  # what your engine expects
+        "time": df["ts"],  # align with backtest engine expectations
         "close": ratio,
         "low":   ratio,
         "high":  ratio,
     })
-
