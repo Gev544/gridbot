@@ -18,6 +18,7 @@ async def run():
     # Clients
     binance = BinanceSpot(cfg.binance_key, cfg.binance_secret)
     await binance.connect()
+    binance.load_symbol_filters(cfg.symbol)
     bybit = BybitFutures(cfg.bybit_key, cfg.bybit_secret)
 
     try:

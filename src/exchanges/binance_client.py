@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import math
 from binance import AsyncClient, BinanceSocketManager
 from binance.client import Client as SpotSync
 
@@ -9,6 +10,7 @@ class BinanceSpot:
         self.api_secret = api_secret
         self._client = None
         self._spot_sync = None
+        self._filters = {}
         self.log = logging.getLogger("gridbot.binance")
 
     async def connect(self):
@@ -25,11 +27,53 @@ class BinanceSpot:
         ticker = await self._client.get_symbol_ticker(symbol=symbol)
         return float(ticker["price"])
 
+    def load_symbol_filters(self, symbol: str):
+        info = self._spot_sync.get_symbol_info(symbol=symbol)
+        filters = {}
+        for f in info["filters"]:
+            if f["filterType"] == "PRICE_FILTER":
+                filters["tickSize"] = float(f["tickSize"])
+            elif f["filterType"] == "LOT_SIZE":
+                filters["stepSize"] = float(f["stepSize"])
+                filters["minQty"] = float(f["minQty"])
+            elif f["filterType"] == "MIN_NOTIONAL":
+                filters["minNotional"] = float(f["minNotional"])
+        self._filters[symbol] = filters
+
+    def _ensure_filters(self, symbol: str):
+        if symbol not in self._filters:
+            self.load_symbol_filters(symbol)
+
+    def _round_price(self, symbol: str, price: float) -> float:
+        self._ensure_filters(symbol)
+        tick = self._filters[symbol].get("tickSize", 0.01)
+        return math.floor(price / tick) * tick
+
+    def _round_qty(self, symbol: str, qty: float) -> float:
+        self._ensure_filters(symbol)
+        step = self._filters[symbol].get("stepSize", 0.001)
+        min_qty = self._filters[symbol].get("minQty", step)
+        qty = math.floor(qty / step) * step
+        if qty < min_qty:
+            qty = min_qty
+        return qty
+
+    def _ensure_notional(self, symbol: str, qty: float, price: float) -> float:
+        self._ensure_filters(symbol)
+        min_notional = self._filters[symbol].get("minNotional")
+        step = self._filters[symbol].get("stepSize", 0.001)
+        if min_notional and qty * price < min_notional:
+            qty = math.ceil(min_notional / price / step) * step
+        return qty
+
     async def get_klines(self, symbol: str, interval: str="1h", limit: int=200):
         # Returns raw kline rows as provided by Binance
         return await self._client.get_klines(symbol=symbol, interval=interval, limit=limit)
 
     def place_limit_buy(self, symbol: str, quantity: float, price: float, dry_run: bool=True):
+        price = self._round_price(symbol, price)
+        quantity = self._round_qty(symbol, quantity)
+        quantity = self._ensure_notional(symbol, quantity, price)
         if dry_run:
             self.log.info(f"[DRY] BINANCE BUY {symbol} qty={quantity} @ {price}")
             return {"orderId":"DRY"}
@@ -37,6 +81,9 @@ class BinanceSpot:
                                             quantity=quantity, price=f"{price:.8f}")
 
     def place_limit_sell(self, symbol: str, quantity: float, price: float, dry_run: bool=True):
+        price = self._round_price(symbol, price)
+        quantity = self._round_qty(symbol, quantity)
+        quantity = self._ensure_notional(symbol, quantity, price)
         if dry_run:
             self.log.info(f"[DRY] BINANCE SELL {symbol} qty={quantity} @ {price}")
             return {"orderId":"DRY"}
