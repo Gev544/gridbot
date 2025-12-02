@@ -43,11 +43,11 @@ class BinanceSpot:
         return self._spot_sync.create_order(symbol=symbol, side="SELL", type="LIMIT", timeInForce="GTC",
                                             quantity=quantity, price=f"{price:.8f}")
 
-    def cancel_all(self, symbol: str, dry_run: bool=True):
+    async def cancel_all(self, symbol: str, dry_run: bool=True):
         if dry_run:
             self.log.info(f"[DRY] BINANCE Cancel all for {symbol}")
             return []
-        return self._spot_sync.cancel_open_orders(symbol=symbol)
+        return await self._client.cancel_open_orders(symbol=symbol)
 
     def get_open_orders(self, symbol: str):
         return self._spot_sync.get_open_orders(symbol=symbol)

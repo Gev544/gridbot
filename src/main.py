@@ -44,7 +44,7 @@ async def run():
             qty_per_order = lot
 
         # Cancel any leftovers
-        binance.cancel_all(cfg.symbol, dry_run=cfg.dry_run)
+        await binance.cancel_all(cfg.symbol, dry_run=cfg.dry_run)
 
         # Place initial ladder
         placed = 0
@@ -73,7 +73,7 @@ Press Ctrl+C to stop.
             price = await binance.get_price(cfg.symbol)
             if cfg.exit_on_breakout and (price < cfg.grid_min*0.98 or price > cfg.grid_max*1.02):
                 log.warning(f"Breakout detected @ {price:.2f}. Exiting session...")
-                binance.cancel_all(cfg.symbol, dry_run=cfg.dry_run)
+                await binance.cancel_all(cfg.symbol, dry_run=cfg.dry_run)
                 # NOTE: For safety, we do NOT market-close inventory automatically in this skeleton.
                 # User can extend: market sell base and close hedge here.
                 break
