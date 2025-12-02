@@ -5,6 +5,8 @@ def fetch_futures_klines(symbol: str, interval: str, start_str: str, end_str: st
     """Fetch USD-M futures klines from Binance (public). Returns a cleaned DataFrame."""
     cli = Client(api_key=None, api_secret=None)
     raw = cli.futures_historical_klines(symbol=symbol, interval=interval, start_str=start_str, end_str=end_str)
+    if not raw:
+        raise ValueError(f"No klines returned for {symbol} {interval} {start_str}->{end_str}")
     cols = ["open_time","open","high","low","close","volume","close_time","quote_asset_volume",
             "number_of_trades","taker_buy_base","taker_buy_quote","ignore"]
     df = pd.DataFrame(raw, columns=cols)

@@ -15,14 +15,14 @@ def main():
     um.set_isolated(cfg.symbol, cfg.isolated)
     um.set_leverage(cfg.symbol, leverage=1)
 
-    tick, step, min_qty = um.exchange_filters(cfg.symbol)
+    tick, step, min_qty, min_notional = um.exchange_filters(cfg.symbol)
 
     mid = um.price(cfg.symbol)
     grid = build_both_sides(mid, cfg.grid_levels, cfg.step_pct, cfg.tp_pct)
 
     notional = cfg.order_usdt * cfg.effective_exposure
     qty = max(notional / mid, min_qty)
-    qty = um.round_qty(qty, step, min_qty)
+    qty = um.round_qty(qty, step, min_qty, min_notional=min_notional, price=mid)
 
     log.info(f"Start BOTH-SIDES GRID {cfg.symbol} mid={mid:.2f} levels/side={cfg.grid_levels} "
              f"step={cfg.step_pct}% tp={cfg.tp_pct}% qty≈{qty} DRY={cfg.dry_run}")
@@ -31,12 +31,12 @@ def main():
 
     placed = 0
     for entry, tp in zip(grid.longs.entries, grid.longs.tps):
-        e = um.round_price(entry, tick); t = um.round_price(tp, tick)
+        e = um.round_price(entry, tick, side="BUY"); t = um.round_price(tp, tick, side="SELL")
         um.place_limit(cfg.symbol, "BUY", qty, e, reduce_only=False, dry=cfg.dry_run)
         um.place_limit(cfg.symbol, "SELL", qty, t, reduce_only=True, dry=cfg.dry_run)
         placed += 2
     for entry, tp in zip(grid.shorts.entries, grid.shorts.tps):
-        e = um.round_price(entry, tick); t = um.round_price(tp, tick)
+        e = um.round_price(entry, tick, side="SELL"); t = um.round_price(tp, tick, side="BUY")
         um.place_limit(cfg.symbol, "SELL", qty, e, reduce_only=False, dry=cfg.dry_run)
         um.place_limit(cfg.symbol, "BUY", qty, t, reduce_only=True, dry=cfg.dry_run)
         placed += 2

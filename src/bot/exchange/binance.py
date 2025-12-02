@@ -1,4 +1,7 @@
-import math, logging
+import logging
+from decimal import Decimal, ROUND_DOWN, ROUND_UP
+from typing import Optional, Tuple
+
 from binance.um_futures import UMFutures
 
 class BinanceUM:
@@ -10,7 +13,7 @@ class BinanceUM:
         t = self.client.ticker_price(symbol)
         return float(t["price"])
 
-    def exchange_filters(self, symbol: str):
+    def exchange_filters(self, symbol: str) -> Tuple[float, float, float, Optional[float]]:
         info = self.client.exchange_info()
         for s in info["symbols"]:
             if s["symbol"] == symbol:
@@ -18,15 +21,40 @@ class BinanceUM:
                 tick = float(fs["PRICE_FILTER"]["tickSize"])
                 step = float(fs["LOT_SIZE"]["stepSize"])
                 min_qty = float(fs["LOT_SIZE"]["minQty"])
-                return tick, step, min_qty
+                min_notional = None
+                if "MIN_NOTIONAL" in fs:
+                    # Futures MIN_NOTIONAL is sometimes present; guard so small orders do not get rejected
+                    min_notional = float(fs["MIN_NOTIONAL"]["notional"])
+                return tick, step, min_qty, min_notional
         raise RuntimeError("Symbol not found in exchange_info")
 
-    def round_price(self, p: float, tick: float) -> float:
-        return math.floor(p / tick) * tick
+    @staticmethod
+    def _quantize(value: float, step: float, rounding) -> float:
+        step_dec = Decimal(str(step))
+        return float(
+            (Decimal(str(value)) / step_dec).to_integral_value(rounding=rounding) * step_dec
+        )
 
-    def round_qty(self, q: float, step: float, min_qty: float) -> float:
-        q = math.floor(q / step) * step
-        return max(q, min_qty)
+    def round_price(self, price: float, tick: float, side: str) -> float:
+        """Round price to Binance tick; SELL rounds up for better TP, BUY rounds down for better entry."""
+        rounding = ROUND_DOWN if side.upper() == "BUY" else ROUND_UP
+        return self._quantize(price, tick, rounding)
+
+    def round_qty(
+        self,
+        qty: float,
+        step: float,
+        min_qty: float,
+        min_notional: Optional[float] = None,
+        price: Optional[float] = None,
+    ) -> float:
+        """Round quantity to lot size and respect minQty/minNotional."""
+        q = self._quantize(qty, step, ROUND_DOWN)
+        q = max(q, min_qty)
+        if min_notional and price:
+            min_by_notional = Decimal(str(min_notional)) / Decimal(str(price))
+            q = max(q, float(self._quantize(min_by_notional, step, ROUND_UP)))
+        return q
 
     def set_isolated(self, symbol: str, isolated: bool=True):
         try:

@@ -11,4 +11,5 @@ if [ ! -f .env ]; then
   echo "[i] Created .env from sample. Edit keys and set DRY_RUN=false to go live."
 fi
 
-python -m src.main
+# Alias to bot entrypoint for convenience
+python -m src.bot.main "$@"

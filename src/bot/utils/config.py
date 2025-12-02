@@ -26,3 +26,5 @@ class Settings(BaseModel):
             raise ValueError("STEP_PCT must be > 0")
         if self.tp_pct <= 0:
             raise ValueError("TP_PCT must be > 0")
+        if not self.dry_run and (not self.api_key or not self.api_secret):
+            raise ValueError("Live trading requires BINANCE_API_KEY and BINANCE_API_SECRET")
