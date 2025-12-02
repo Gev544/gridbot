@@ -11,8 +11,8 @@ class Settings(BaseModel):
     api_secret: str = Field(default_factory=lambda: os.getenv("BINANCE_API_SECRET",""))
     symbol: str = Field(default_factory=lambda: os.getenv("SYMBOL","BTCUSDT"))
     grid_levels: int = Field(default_factory=lambda: int(os.getenv("GRID_LEVELS","20")))
-    step_pct: float = Field(default_factory=lambda: float(os.getenv("STEP_PCT","0.25")))   # %
-    tp_pct: float = Field(default_factory=lambda: float(os.getenv("TP_PCT","0.20")))       # %
+    step_pct: float = Field(default_factory=lambda: float(os.getenv("STEP_PCT","0.25")))
+    tp_pct: float = Field(default_factory=lambda: float(os.getenv("TP_PCT","0.20")))
     order_usdt: float = Field(default_factory=lambda: float(os.getenv("ORDER_USDT","20")))
     max_range_pct: float = Field(default_factory=lambda: float(os.getenv("MAX_RANGE_PCT","4.0")))
     effective_exposure: float = Field(default_factory=lambda: float(os.getenv("EFFECTIVE_EXPOSURE","1.2")))

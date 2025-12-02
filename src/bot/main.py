@@ -1,9 +1,9 @@
 import time
 from dotenv import load_dotenv
-from src.utils.logging import setup_logger
-from src.utils.config import Settings
-from src.exchange.binance import BinanceUM
-from src.engine.grid import build_both_sides
+from src.bot.utils.logging import setup_logger
+from src.bot.utils.config import Settings
+from src.bot.exchange.binance import BinanceUM
+from src.bot.engine.grid import build_both_sides
 
 def main():
     load_dotenv()
