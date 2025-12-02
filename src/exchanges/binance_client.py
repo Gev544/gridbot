@@ -47,7 +47,15 @@ class BinanceSpot:
         if dry_run:
             self.log.info(f"[DRY] BINANCE Cancel all for {symbol}")
             return []
-        return await self._client.cancel_open_orders(symbol=symbol)
+        orders = await self._client.get_open_orders(symbol=symbol)
+        results = []
+        for o in orders:
+            try:
+                res = await self._client.cancel_order(symbol=symbol, orderId=o["orderId"])
+                results.append(res)
+            except Exception as exc:
+                self.log.warning(f"Failed to cancel order {o.get('orderId')} for {symbol}: {exc}")
+        return results
 
     def get_open_orders(self, symbol: str):
         return self._spot_sync.get_open_orders(symbol=symbol)
